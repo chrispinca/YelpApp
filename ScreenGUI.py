@@ -185,7 +185,8 @@ class ScreenGUI:
             rows = cursor.fetchall()
 
             for row in rows:
-                print(row)
+                stars = f"STARS: {row.stars}"
+                print(f"ID: {row.business_id}, NAME: {row.name}, ADDRESS: {row.address}, CITY: {row.city}, {stars}")
         except pyodbc.Error as e:
             messagebox.showerror("SQL ERROR")
         finally: 
