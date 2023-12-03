@@ -49,17 +49,17 @@ class ScreenGUI:
     Handles the event triggered by the login button
     """
     def login(self):
-        userID = self.EntryUserID.get()
-        print(userID)
+        self.userID = self.EntryUserID.get()
+        print(self.userID)
         try:
-            conn = pyodbc.connect('driver={SQL Server};server=cypress.csil.sfu.ca;uid=s_cpinca;pwd=ba266eay2N3Edryt')
+            self.conn = pyodbc.connect('driver={SQL Server};server=cypress.csil.sfu.ca;uid=s_cpinca;pwd=ba266eay2N3Edryt')
             print("Connection successful")
             self.createMainScreen()
         except pyodbc.Error as e:
             messagebox.showerror("Login Failed", f"Invalid Credentials")
         finally:
             if 'conn' in locals():
-                conn.close()
+                self.conn.close()
 
 
     def createMainScreen(self):
@@ -82,7 +82,23 @@ class ScreenGUI:
         print("We searchin users")
 
     def makeFriend(self):
-        print("We makin friends")
+        for widget in self.LoginFrame.winfo_children():
+            widget.destroy()
+
+        self.TitleLabel = tk.Label(self.LoginFrame, text = "Make Friend", font = ("Arial, 16")) 
+        self.TitleLabel.grid(row=0, column=0, columnspan=2, pady=10)
+
+        self.BackButton = tk.Button(self.LoginFrame, text="Back", command=self.createMainScreen)
+        self.BackButton.grid(row=0, column=15, columnspan=2, padx=5, pady=4)
+
+        self.LabelAddFriend = tk.Label(self.LoginFrame, text="Enter Their User ID To Add Friend: ")
+        self.LabelAddFriend.grid(row=1, column=0, padx=5, pady=2)
+
+        self.EntryAddUserID = tk.Entry(self.LoginFrame)
+        self.EntryAddUserID.grid(row=2, column=0, padx=5, pady=2)
+
+        self.AddFriendButton = tk.Button(self.LoginFrame, text="Add Friend", command=self.addFriend, height = self.buttonHeight, width = self.buttonWidth)
+        self.AddFriendButton.grid(row=3, column=0, columnspan=4, pady=4)
 
     def reviewBusiness(self):
         print("We reviewin businesses")
@@ -163,17 +179,15 @@ class ScreenGUI:
     
     def searchForBusiness(self):
         # Add logic to perform the search based on the entered criteria
-        minStars = self.EntryMinStars.get()
-        cityName = self.EntryCityName.get()
-        businessName = self.EntryBusinessName.get()
+        minStars = self.EntryMinStars.get() or '0'
+        cityName = self.EntryCityName.get() or ''
+        businessName = self.EntryBusinessName.get() or ''
         orderBy = self.orderByVar.get()
         print(f"Performing search with these options: {minStars} {cityName} {businessName}")
         print(f"Sorting by: {orderBy}")
 
         try:
-            conn = pyodbc.connect('driver={SQL Server};server=cypress.csil.sfu.ca;uid=s_cpinca;pwd=ba266eay2N3Edryt')
-            cursor = conn.cursor()
-
+            cursor = self.conn.cursor()
             sqlQuery = f"""
                           SELECT business_id, name, address, city, stars 
                           FROM business 
@@ -184,26 +198,26 @@ class ScreenGUI:
             cursor.execute(sqlQuery)
             rows = cursor.fetchall()
 
-            for row in rows:
-                stars = f"STARS: {row.stars}"
-                print(f"ID: {row.business_id}, NAME: {row.name}, ADDRESS: {row.address}, CITY: {row.city}, {stars}")
+            if not rows:
+                print("NO RESULTS MATCHING YOUR CRITERIA FOUND")
+            else:
+                for row in rows:
+                    print(f"ID: {row.business_id}, NAME: {row.name}, ADDRESS: {row.address}, CITY: {row.city}, STARS: {row.stars}")
         except pyodbc.Error as e:
             messagebox.showerror("SQL ERROR")
         finally: 
             if 'conn' in locals():
-                conn.close()
+                self.conn.close()
 
     def searchForUser(self):
-        userName = self.EntryUserName.get()
-        reviewCount = self.EntryMinReviewCount.get()
-        #set default to 0
-        minAvgStars = self.EntryMinStars.get()
+        userName = self.EntryUserName.get() or ''
+        reviewCount = self.EntryMinReviewCount.get() or '0'
+        minAvgStars = self.EntryMinStars.get() or ' 0'
         print(f"Performing search with these options: {userName} {reviewCount} {minAvgStars}")
         print(f"Sorting by name: ")
 
         try:
-            conn = pyodbc.connect('driver={SQL Server};server=cypress.csil.sfu.ca;uid=s_cpinca;pwd=ba266eay2N3Edryt')
-            cursor = conn.cursor()
+            cursor = self.conn.cursor()
 
             sqlQuery2 = f"""
                           SELECT user_id, name, review_count, useful, funny, cool, average_stars, yelping_since
@@ -215,13 +229,46 @@ class ScreenGUI:
             cursor.execute(sqlQuery2)
             rows = cursor.fetchall()
 
-            for row in rows:
-                print(row)
+            if not rows:
+                print("NO RESULTS MATCHING YOUR CRITERIA FOUND")
+            else:
+                for row in rows:
+                    print(f"ID: {row.user_id}, NAME: {row.name}, REVIEW COUNT: {row.review_count}, USEFUL: {row.useful}, FUNNY: {row.funny}, COOL: {row.cool}, AVERAGE STARS: {row.average_stars}, SIGNUP DATE: {row.yelping_since}")
         except pyodbc.Error as e:
             messagebox.showerror("SQL ERROR", f"An error occurred while querying the database: {str(e)}")
         finally: 
             if 'conn' in locals():
-                conn.close()
+                self.conn.close()
+
+    def addFriend(self):
+        friendID = self.EntryAddUserID.get()
+        print(friendID)
+        cursor = self.conn.cursor()
+        sqlUserCheck = f"""
+                        SELECT COUNT(*)
+                        FROM user_yelp
+                        WHERE user_id = '{friendID}'
+                        """
+        cursor.execute(sqlUserCheck)
+        count = cursor.fetchone()[0]
+
+        if count > 0:
+            try:
+                cursor = self.conn.cursor()
+                sqlQuery3 = f"""
+                            INSERT INTO Friendship
+                            VALUES (
+                                '{self.userID}',
+                                '{friendID}'
+                            )
+                            """
+                cursor.execute(sqlQuery3)
+            except pyodbc.Error as e:
+                messagebox.showerror("SQL ERROR")
+            finally: 
+                if 'conn' in locals():
+                    self.conn.close()
+
 
 
 if __name__ == "__main__":
