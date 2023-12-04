@@ -1,5 +1,7 @@
+import datetime
 import tkinter as tk
 from tkinter import messagebox
+import secrets
 
 import pyodbc
 
@@ -7,7 +9,7 @@ import pyodbc
 Initializes the Screen for the GUI
 """
 
-class ScreenGUI:
+class YelpApp:
     def __init__(self, root):
         #saves the root window and then sets the window title
         self.root = root
@@ -51,17 +53,29 @@ class ScreenGUI:
     def login(self):
         self.userID = self.EntryUserID.get()
         print(self.userID)
+
         try:
             self.conn = pyodbc.connect('driver={SQL Server};server=cypress.csil.sfu.ca;uid=s_cpinca;pwd=ba266eay2N3Edryt')
             print("Connection successful")
-            self.createMainScreen()
         except pyodbc.Error as e:
             messagebox.showerror("Login Failed", f"Invalid Credentials")
         finally:
             if 'conn' in locals():
                 self.conn.close()
 
+        cursor = self.conn.cursor()
+        sqlUserCheck = f"""
+                    SELECT COUNT(*)
+                    FROM user_yelp
+                    WHERE user_id = '{self.userID}'
+                    """
+        cursor.execute(sqlUserCheck)
+        count = cursor.fetchone()[0]
+        print(count)
 
+        if count > 0:
+            self.createMainScreen()
+            
     def createMainScreen(self):
         for widget in self.LoginFrame.winfo_children():
             widget.destroy()
@@ -77,9 +91,6 @@ class ScreenGUI:
 
         self.ReviewBusinessButton = tk.Button(self.LoginFrame, text="Review Business", command=self.reviewBusiness, height = self.buttonHeight, width = self.buttonWidth)
         self.ReviewBusinessButton.grid(row=3, column=0, padx=5, pady=5)
-
-    def searchUsers(self):
-        print("We searchin users")
 
     def makeFriend(self):
         for widget in self.LoginFrame.winfo_children():
@@ -100,10 +111,6 @@ class ScreenGUI:
         self.AddFriendButton = tk.Button(self.LoginFrame, text="Add Friend", command=self.addFriend, height = self.buttonHeight, width = self.buttonWidth)
         self.AddFriendButton.grid(row=3, column=0, columnspan=4, pady=4)
 
-    def reviewBusiness(self):
-        print("We reviewin businesses")
-
-
     def searchBusiness(self): 
         for widget in self.LoginFrame.winfo_children():
             widget.destroy()
@@ -115,7 +122,7 @@ class ScreenGUI:
         self.TitleLabel = tk.Label(self.LoginFrame, text = "Search Businesses", font = ("Arial, 16")) 
         self.TitleLabel.grid(row=0, column=0, columnspan=2, pady=10)
 
-        self.LabelSearch = tk.Label(self.LoginFrame, text="Minimum Stars (1-5): ")
+        self.LabelSearch = tk.Label(self.LoginFrame, text="Minimum Stars (0-5): ")
         self.LabelSearch.grid(row=1, column=0, padx=5, pady=2)
 
         self.EntryMinStars = tk.Entry(self.LoginFrame)
@@ -144,6 +151,33 @@ class ScreenGUI:
 
         self.BackButton = tk.Button(self.LoginFrame, text="Back", command=self.createMainScreen)
         self.BackButton.grid(row=0, column=15, columnspan=2, padx=5, pady=4)
+
+    def reviewBusiness(self):
+        for widget in self.LoginFrame.winfo_children():
+            widget.destroy()
+
+        self.TitleLabel = tk.Label(self.LoginFrame, text = "Review Business", font = ("Arial, 16")) 
+        self.TitleLabel.grid(row=0, column=0, columnspan=2, pady=10)
+
+        self.BackButton = tk.Button(self.LoginFrame, text="Back", command=self.createMainScreen)
+        self.BackButton.grid(row=0, column=15, columnspan=2, padx=5, pady=4)
+
+        self.LabelReviewBusinessID = tk.Label(self.LoginFrame, text="Business ID: ")
+        self.LabelReviewBusinessID.grid(row=1, column=0, padx=5, pady=2)
+
+        self.EntryReviewBusinessID = tk.Entry(self.LoginFrame)
+        self.EntryReviewBusinessID.grid(row=2, column=0, padx=5, pady=2)
+
+        self.LabelRateStars = tk.Label(self.LoginFrame, text="Rate by Stars (1-5): ")
+        self.LabelRateStars.grid(row=3, column=0, padx=5, pady=2)
+
+        self.EntryRateStars = tk.Entry(self.LoginFrame)
+        self.EntryRateStars.grid(row=4, column=0, padx=5, pady=2)
+
+        self.AddReviewButton = tk.Button(self.LoginFrame, text="Review Business", command=self.addReview, height = self.buttonHeight, width = self.buttonWidth)
+        self.AddReviewButton.grid(row=5, column=0, columnspan=4, pady=4)
+
+
 
     def searchUsers(self): 
         for widget in self.LoginFrame.winfo_children():
@@ -180,22 +214,25 @@ class ScreenGUI:
     def searchForBusiness(self):
         # Add logic to perform the search based on the entered criteria
         minStars = self.EntryMinStars.get() or '0'
+        minStarsInt = int(minStars)
+
+        if not 0 <= minStarsInt <= 5:
+            print("Stars must be between 0 and 5")
+
         cityName = self.EntryCityName.get() or ''
         businessName = self.EntryBusinessName.get() or ''
         orderBy = self.orderByVar.get()
-        print(f"Performing search with these options: {minStars} {cityName} {businessName}")
-        print(f"Sorting by: {orderBy}")
 
         try:
             cursor = self.conn.cursor()
-            sqlQuery = f"""
+            sqlBusinessSearch = f"""
                           SELECT business_id, name, address, city, stars 
                           FROM business 
                           WHERE stars >= {minStars} 
                           AND city LIKE '%{cityName}%' 
                           AND name LIKE '%{businessName}%' 
                           ORDER BY {orderBy}"""
-            cursor.execute(sqlQuery)
+            cursor.execute(sqlBusinessSearch)
             rows = cursor.fetchall()
 
             if not rows:
@@ -213,20 +250,18 @@ class ScreenGUI:
         userName = self.EntryUserName.get() or ''
         reviewCount = self.EntryMinReviewCount.get() or '0'
         minAvgStars = self.EntryMinStars.get() or ' 0'
-        print(f"Performing search with these options: {userName} {reviewCount} {minAvgStars}")
-        print(f"Sorting by name: ")
 
         try:
             cursor = self.conn.cursor()
 
-            sqlQuery2 = f"""
+            sqlUserSearch = f"""
                           SELECT user_id, name, review_count, useful, funny, cool, average_stars, yelping_since
                           FROM user_yelp 
                           WHERE average_stars >= {minAvgStars} 
                           AND name LIKE '%{userName}%' 
                           AND review_count >= {reviewCount} 
                           ORDER BY name"""
-            cursor.execute(sqlQuery2)
+            cursor.execute(sqlUserSearch)
             rows = cursor.fetchall()
 
             if not rows:
@@ -245,34 +280,87 @@ class ScreenGUI:
         print(friendID)
         cursor = self.conn.cursor()
         sqlUserCheck = f"""
-                        SELECT COUNT(*)
+                        SELECT *
                         FROM user_yelp
                         WHERE user_id = '{friendID}'
                         """
         cursor.execute(sqlUserCheck)
-        count = cursor.fetchone()[0]
+        userCheck = cursor.fetchone()
 
-        if count > 0:
+        if userCheck:
             try:
                 cursor = self.conn.cursor()
-                sqlQuery3 = f"""
-                            INSERT INTO Friendship
+                sqlAddFriend = f"""
+                            INSERT INTO friendship (user_id, friend)
                             VALUES (
                                 '{self.userID}',
                                 '{friendID}'
                             )
                             """
-                cursor.execute(sqlQuery3)
+                cursor.execute(sqlAddFriend)
+                self.conn.commit()
+                messagebox.showinfo("Success", "Friend added successfully!")
             except pyodbc.Error as e:
-                messagebox.showerror("SQL ERROR")
+                messagebox.showerror("Error", "Failed to add friend. Please try again.")
             finally: 
                 if 'conn' in locals():
                     self.conn.close()
 
+    def RandomReviewID(self):
+        prefix = "cmpt354"
+        randomString = secrets.token_hex(8)
+        return f"{prefix}_{randomString[:6]}"
 
+    def addReview(self):
+        
+        businessID = self.EntryReviewBusinessID.get()
+        rateStars = self.EntryRateStars.get()
+        rateStarsInt = int(rateStars)
+
+        if 0 <= rateStarsInt <= 5:
+            reviewID = self.RandomReviewID()
+        else:
+            print("Stars must be between  0 and 5")
+
+        cursor = self.conn.cursor()
+        sqlUserCheck = f"""
+                        SELECT *
+                        FROM business
+                        WHERE business_id = '{businessID}'
+                        """
+        cursor.execute(sqlUserCheck)
+        userCheck = cursor.fetchone()
+
+        if userCheck:
+            try:
+                cursor = self.conn.cursor()
+
+                sqlAddReview = f"""
+                          INSERT INTO review (review_id, user_id, business_id, stars, date)
+                          VALUES ('{reviewID}', '{self.userID}','{businessID}','{rateStars}', GETDATE())
+                          """
+                cursor.execute(sqlAddReview)
+                self.conn.commit()
+
+                sqlUpdateBusiness = f"""
+                                UPDATE business
+                                SET review_count = (SELECT COUNT(*) FROM Review WHERE business_id = '{businessID}')
+                                WHERE business_id = '{businessID}'
+                                """
+                cursor.execute(sqlUpdateBusiness)
+                self.conn.commit()
+                messagebox.showinfo("Success", "Business Reviewed Successfully!")
+
+            except pyodbc.Error as e:
+                messagebox.showerror("Error", "Failed to review Business. Please try again.")
+            finally: 
+                if 'conn' in locals():
+                    self.conn.close()
+        else:
+            messagebox.showerror("Error", "No Business with that ID exists")
 
 if __name__ == "__main__":
-    #creates the Tkinter root window and an instance of the ScreenGUI class
+    #creates the Tkinter root window and an instance of the YelpApp
     root = tk.Tk()
-    AppScreen = ScreenGUI(root)
+    AppScreen = YelpApp(root)
     root.mainloop()
