@@ -75,6 +75,8 @@ class YelpApp:
 
         if count > 0:
             self.createMainScreen()
+        else: 
+            messagebox.showerror("Login Failed", f"Invalid Credentials")
             
     def createMainScreen(self):
         #clears the login frame and creates the main screen buttons
@@ -125,7 +127,7 @@ class YelpApp:
         self.TitleLabel = tk.Label(self.LoginFrame, text = "Search Businesses", font = ("Arial, 16")) 
         self.TitleLabel.grid(row=0, column=0, columnspan=2, pady=10)
 
-        self.LabelSearch = tk.Label(self.LoginFrame, text="Minimum Stars (0-5): ")
+        self.LabelSearch = tk.Label(self.LoginFrame, text="Minimum Stars (1-5): ")
         self.LabelSearch.grid(row=1, column=0, padx=5, pady=2)
 
         self.EntryMinStars = tk.Entry(self.LoginFrame)
@@ -206,7 +208,7 @@ class YelpApp:
         self.EntryMinReviewCount = tk.Entry(self.LoginFrame)
         self.EntryMinReviewCount.grid(row=4, column=0, padx=5, pady=2)
 
-        self.LabelMinAvgStars = tk.Label(self.LoginFrame, text="Minimum Average Stars (0-5): ")
+        self.LabelMinAvgStars = tk.Label(self.LoginFrame, text="Minimum Average Stars (1-5): ")
         self.LabelMinAvgStars.grid(row=5, column=0, padx=5, pady=2)
 
         self.EntryMinStars = tk.Entry(self.LoginFrame)
@@ -290,36 +292,38 @@ class YelpApp:
         friendID = self.EntryAddUserID.get()
         if friendID == self.userID:
             messagebox.showerror("Error", "You Cannot Add Yourself!")
-            cursor = self.conn.cursor()
-            #check that the user actually exists
-            sqlUserCheck = f"""
+            return
+        
+        cursor = self.conn.cursor()
+        #check that the user actually exists
+        sqlUserCheck = f"""
                         SELECT *
                         FROM user_yelp
                         WHERE user_id = '{friendID}'
                         """
-            cursor.execute(sqlUserCheck)
-            userCheck = cursor.fetchone()
-        else:
+        cursor.execute(sqlUserCheck)
+        userCheck = cursor.fetchone()
+        
 
-            #if the user exists, execute the sql query to add a friend
-            if userCheck:
-                try:
-                    cursor = self.conn.cursor()
-                    sqlAddFriend = f"""
+        #if the user exists, execute the sql query to add a friend
+        if userCheck:
+            try:
+                cursor = self.conn.cursor()
+                sqlAddFriend = f"""
                             INSERT INTO friendship (user_id, friend)
                             VALUES (
                                 '{self.userID}',
                                 '{friendID}'
                             )
                             """
-                    cursor.execute(sqlAddFriend)
-                    self.conn.commit()
-                    messagebox.showinfo("Success", "Friend added successfully!")
-                except pyodbc.Error as e:
-                    messagebox.showerror("Error", "Failed to add friend. Please try again.")
-                finally: 
-                    if 'conn' in locals():
-                        self.conn.close()
+                cursor.execute(sqlAddFriend)
+                self.conn.commit()
+                messagebox.showinfo("Success", "Friend added successfully!")
+            except pyodbc.Error as e:
+                messagebox.showerror("Error", "Failed to add friend. Please try again.")
+            finally: 
+                if 'conn' in locals():
+                    self.conn.close()
 
     #Creates a random id for the review
     def RandomReviewID(self):
