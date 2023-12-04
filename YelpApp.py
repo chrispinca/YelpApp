@@ -5,7 +5,6 @@ import secrets
 
 import pyodbc
 
-
 #Initializes the Screen for the GUI
 
 class YelpApp:
@@ -289,35 +288,38 @@ class YelpApp:
     def addFriend(self):
         #add a friend based on their userID
         friendID = self.EntryAddUserID.get()
-        cursor = self.conn.cursor()
-        #check that the user actually exists
-        sqlUserCheck = f"""
+        if friendID == self.userID:
+            messagebox.showerror("Error", "You Cannot Add Yourself!")
+            cursor = self.conn.cursor()
+            #check that the user actually exists
+            sqlUserCheck = f"""
                         SELECT *
                         FROM user_yelp
                         WHERE user_id = '{friendID}'
                         """
-        cursor.execute(sqlUserCheck)
-        userCheck = cursor.fetchone()
+            cursor.execute(sqlUserCheck)
+            userCheck = cursor.fetchone()
+        else:
 
-        #if the user exists, execute the sql query to add a friend
-        if userCheck:
-            try:
-                cursor = self.conn.cursor()
-                sqlAddFriend = f"""
+            #if the user exists, execute the sql query to add a friend
+            if userCheck:
+                try:
+                    cursor = self.conn.cursor()
+                    sqlAddFriend = f"""
                             INSERT INTO friendship (user_id, friend)
                             VALUES (
                                 '{self.userID}',
                                 '{friendID}'
                             )
                             """
-                cursor.execute(sqlAddFriend)
-                self.conn.commit()
-                messagebox.showinfo("Success", "Friend added successfully!")
-            except pyodbc.Error as e:
-                messagebox.showerror("Error", "Failed to add friend. Please try again.")
-            finally: 
-                if 'conn' in locals():
-                    self.conn.close()
+                    cursor.execute(sqlAddFriend)
+                    self.conn.commit()
+                    messagebox.showinfo("Success", "Friend added successfully!")
+                except pyodbc.Error as e:
+                    messagebox.showerror("Error", "Failed to add friend. Please try again.")
+                finally: 
+                    if 'conn' in locals():
+                        self.conn.close()
 
     #Creates a random id for the review
     def RandomReviewID(self):
