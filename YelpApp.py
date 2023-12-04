@@ -207,7 +207,7 @@ class YelpApp:
         self.EntryMinReviewCount = tk.Entry(self.LoginFrame)
         self.EntryMinReviewCount.grid(row=4, column=0, padx=5, pady=2)
 
-        self.LabelMinAvgStars = tk.Label(self.LoginFrame, text="Minimum Average Stars (1-5): ")
+        self.LabelMinAvgStars = tk.Label(self.LoginFrame, text="Minimum Average Stars (0-5): ")
         self.LabelMinAvgStars.grid(row=5, column=0, padx=5, pady=2)
 
         self.EntryMinStars = tk.Entry(self.LoginFrame)
@@ -219,11 +219,11 @@ class YelpApp:
     
     def searchForBusiness(self):
         #Performs the search based on the criteria entered
-        minStars = self.EntryMinStars.get() or '0'
+        minStars = self.EntryMinStars.get() or 'NULL'
         minStarsInt = int(minStars)
         #check that the correct star input was supplied
-        if not 0 <= minStarsInt <= 5:
-            messagebox.showerror("Stars must be between 0 and 5")
+        if not 1 <= minStarsInt <= 5:
+            messagebox.showerror("Stars must be between 1 and 5")
 
         cityName = self.EntryCityName.get() or ''
         businessName = self.EntryBusinessName.get() or ''
@@ -248,7 +248,7 @@ class YelpApp:
                 for row in rows:
                     print(f"ID: {row.business_id}, NAME: {row.name}, ADDRESS: {row.address}, CITY: {row.city}, STARS: {row.stars}")
         except pyodbc.Error as e:
-            messagebox.showerror("SQL ERROR")
+            messagebox.showerror("You must select SORT BY")
             messagebox.showerror("Could Not Find Business")
         finally: 
             if 'conn' in locals():
@@ -332,11 +332,11 @@ class YelpApp:
         rateStars = self.EntryRateStars.get()
         rateStarsInt = int(rateStars)
 
-        if 0 <= rateStarsInt <= 5:
+        if 1 <= rateStarsInt <= 5:
             reviewID = self.RandomReviewID()
         else:
-            print("Stars must be between  0 and 5")
-            messagebox.showerror("Stars must be between  0 and 5")
+            print("Stars must be between  1 and 5")
+            messagebox.showerror("Stars must be between  1 and 5")
 
         cursor = self.conn.cursor()
         #check that the business exists
