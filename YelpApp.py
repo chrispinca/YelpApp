@@ -5,9 +5,8 @@ import secrets
 
 import pyodbc
 
-"""
-Initializes the Screen for the GUI
-"""
+
+#Initializes the Screen for the GUI
 
 class YelpApp:
     def __init__(self, root):
@@ -55,9 +54,11 @@ class YelpApp:
         print(self.userID)
 
         try:
+            #establishes connection to database
             self.conn = pyodbc.connect('driver={SQL Server};server=cypress.csil.sfu.ca;uid=s_cpinca;pwd=ba266eay2N3Edryt')
             print("Connection successful")
         except pyodbc.Error as e:
+            #error message if it fails
             messagebox.showerror("Login Failed", f"Invalid Credentials")
         finally:
             if 'conn' in locals():
@@ -77,6 +78,7 @@ class YelpApp:
             self.createMainScreen()
             
     def createMainScreen(self):
+        #clears the login frame and creates the main screen buttons
         for widget in self.LoginFrame.winfo_children():
             widget.destroy()
 
@@ -93,6 +95,7 @@ class YelpApp:
         self.ReviewBusinessButton.grid(row=3, column=0, padx=5, pady=5)
 
     def makeFriend(self):
+        #clears the current frame and creates the Make Friend frame
         for widget in self.LoginFrame.winfo_children():
             widget.destroy()
 
@@ -112,6 +115,7 @@ class YelpApp:
         self.AddFriendButton.grid(row=3, column=0, columnspan=4, pady=4)
 
     def searchBusiness(self): 
+        #clears the frame and makes the Search Business frame
         for widget in self.LoginFrame.winfo_children():
             widget.destroy()
 
@@ -153,6 +157,7 @@ class YelpApp:
         self.BackButton.grid(row=0, column=15, columnspan=2, padx=5, pady=4)
 
     def reviewBusiness(self):
+        #clears the frame and creates the Review Business frame
         for widget in self.LoginFrame.winfo_children():
             widget.destroy()
 
@@ -180,6 +185,7 @@ class YelpApp:
 
 
     def searchUsers(self): 
+        #clears the frame and makes the Search Users frame
         for widget in self.LoginFrame.winfo_children():
             widget.destroy()
 
@@ -212,12 +218,12 @@ class YelpApp:
 
     
     def searchForBusiness(self):
-        # Add logic to perform the search based on the entered criteria
+        #Performs the search based on the criteria entered
         minStars = self.EntryMinStars.get() or '0'
         minStarsInt = int(minStars)
-
+        #check that the correct star input was supplied
         if not 0 <= minStarsInt <= 5:
-            print("Stars must be between 0 and 5")
+            messagebox.showerror("Stars must be between 0 and 5")
 
         cityName = self.EntryCityName.get() or ''
         businessName = self.EntryBusinessName.get() or ''
@@ -237,21 +243,25 @@ class YelpApp:
 
             if not rows:
                 print("NO RESULTS MATCHING YOUR CRITERIA FOUND")
+                messagebox.showerror("NO RESULTS MATCHING YOUR CRITERIA FOUND")
             else:
                 for row in rows:
                     print(f"ID: {row.business_id}, NAME: {row.name}, ADDRESS: {row.address}, CITY: {row.city}, STARS: {row.stars}")
         except pyodbc.Error as e:
             messagebox.showerror("SQL ERROR")
+            messagebox.showerror("Could Not Find Business")
         finally: 
             if 'conn' in locals():
                 self.conn.close()
 
     def searchForUser(self):
+        #performs the search for user with the specified criteria
         userName = self.EntryUserName.get() or ''
         reviewCount = self.EntryMinReviewCount.get() or '0'
         minAvgStars = self.EntryMinStars.get() or ' 0'
 
         try:
+            #executes sql query to find the search results
             cursor = self.conn.cursor()
 
             sqlUserSearch = f"""
@@ -266,6 +276,7 @@ class YelpApp:
 
             if not rows:
                 print("NO RESULTS MATCHING YOUR CRITERIA FOUND")
+                messagebox.showerror("NO RESULTS MATCHING YOUR CRITERIA FOUND")
             else:
                 for row in rows:
                     print(f"ID: {row.user_id}, NAME: {row.name}, REVIEW COUNT: {row.review_count}, USEFUL: {row.useful}, FUNNY: {row.funny}, COOL: {row.cool}, AVERAGE STARS: {row.average_stars}, SIGNUP DATE: {row.yelping_since}")
@@ -276,9 +287,10 @@ class YelpApp:
                 self.conn.close()
 
     def addFriend(self):
+        #add a friend based on their userID
         friendID = self.EntryAddUserID.get()
-        print(friendID)
         cursor = self.conn.cursor()
+        #check that the user actually exists
         sqlUserCheck = f"""
                         SELECT *
                         FROM user_yelp
@@ -287,6 +299,7 @@ class YelpApp:
         cursor.execute(sqlUserCheck)
         userCheck = cursor.fetchone()
 
+        #if the user exists, execute the sql query to add a friend
         if userCheck:
             try:
                 cursor = self.conn.cursor()
@@ -306,11 +319,13 @@ class YelpApp:
                 if 'conn' in locals():
                     self.conn.close()
 
+    #Creates a random id for the review
     def RandomReviewID(self):
         prefix = "cmpt354"
         randomString = secrets.token_hex(8)
         return f"{prefix}_{randomString[:6]}"
 
+    #Add a review after supplying criteria
     def addReview(self):
         
         businessID = self.EntryReviewBusinessID.get()
@@ -321,8 +336,10 @@ class YelpApp:
             reviewID = self.RandomReviewID()
         else:
             print("Stars must be between  0 and 5")
+            messagebox.showerror("Stars must be between  0 and 5")
 
         cursor = self.conn.cursor()
+        #check that the business exists
         sqlUserCheck = f"""
                         SELECT *
                         FROM business
@@ -331,17 +348,18 @@ class YelpApp:
         cursor.execute(sqlUserCheck)
         userCheck = cursor.fetchone()
 
+        #if business exists then execute query to add a review
         if userCheck:
             try:
                 cursor = self.conn.cursor()
-
+                #Insert review
                 sqlAddReview = f"""
                           INSERT INTO review (review_id, user_id, business_id, stars, date)
                           VALUES ('{reviewID}', '{self.userID}','{businessID}','{rateStars}', GETDATE())
                           """
                 cursor.execute(sqlAddReview)
                 self.conn.commit()
-
+                #update business after review
                 sqlUpdateBusiness = f"""
                                 UPDATE business
                                 SET review_count = (SELECT COUNT(*) FROM Review WHERE business_id = '{businessID}')
