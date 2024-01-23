@@ -324,6 +324,7 @@ class YelpApp:
             finally: 
                 if 'conn' in locals():
                     self.conn.close()
+        else: messagebox.showerror("Error", "Failed to add friend. Check userID")
 
     #Creates a random id for the review
     def RandomReviewID(self):
